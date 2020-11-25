@@ -1,7 +1,6 @@
 import numpy as np
 from model import create_model
 from utils import *
-import shutil
 import datetime
 
 if __name__ == '__main__':
@@ -12,7 +11,6 @@ if __name__ == '__main__':
     #########################################################################
 
     args    = get_args()
-
     results    = []
     results_ts = []
 
@@ -33,8 +31,8 @@ if __name__ == '__main__':
     ### ------------------------- Results Output ------------------------- ###
     ##########################################################################
 
-    test_name = '1_irrigation_zones_' + str(args.fixed_load_rate) + '_i_area_' + str(args.nodes_area) + \
-                '_line_' + str(args.trans_line_m)
+    test_name = str(args.num_regions) + '_irrigation_zones_' + str(args.fixed_load_rate) + '_i_area_' + \
+                str(args.nodes_area) + '_line_' + str(args.trans_line_m)
     cap_columns, system_ts_columns = get_raw_columns()
 
     # Process the model solution
@@ -54,8 +52,6 @@ if __name__ == '__main__':
     df_results_processed = full_results_processing(args, cap_results, results_ts,
                                                    tx_cap_results_list, tx_cap_results_matrix)
     df_results_processed.to_excel(os.path.join(args.results_dir, 'processed_results_export_' + test_name + '.xlsx'))
-
-
 
 
     running_end_time = datetime.datetime.now()

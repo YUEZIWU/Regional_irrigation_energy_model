@@ -4,7 +4,6 @@ import yaml
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
-import glob
 
 def annualization_rate(i, years):
     return (i*(1+i)**years)/((1+i)**years-1)
@@ -28,12 +27,11 @@ def get_args():
 def load_timeseries(args):
     T = args.num_hours
     # Load solar & load time series, all region use the same
-    solar_pot_hourly   = np.array(pd.read_excel(os.path.join(args.data_dir, 'solar_pot_1yr_cf25_daily_fixed.xlsx'),
+    solar_pot_hourly   = np.array(pd.read_excel(os.path.join(args.data_dir, 'solar_pot.xlsx'),
                                                 index_col=None))[0:T,0]
-    fix_load_hourly_kw = np.array(pd.read_excel(os.path.join(args.data_dir, 'load_kw_1yr.xlsx'),
+    fix_load_hourly_kw = np.array(pd.read_excel(os.path.join(args.data_dir, 'fixed_load_kw.xlsx'),
                                                 index_col=None))[0:T,0]
-    rain_rate_daily_mm_m2 = np.array(pd.read_excel(os.path.join(args.data_dir, 'kobo_rr_2014-2015.xlsx'),
-                                                index_col=None))[0:T,1]
+    rain_rate_daily_mm_m2 = np.array(pd.read_excel(os.path.join(args.data_dir, 'rain_rate_mm_m2.xlsx'), index_col=None))[0:T,1]
     return fix_load_hourly_kw, solar_pot_hourly, rain_rate_daily_mm_m2
 
 
@@ -144,8 +142,7 @@ def full_results_processing(args, cap_results, results_ts, tx_cap_results_list, 
     cap_diesel  = args.num_year * annualization_rate(args.i_rate, args.annualize_years_diesel)
     cap_trans   = args.num_year * annualization_rate(args.i_rate, args.annualize_years_trans)
 
-    # trans_cost_matrix = 0 # cap_trans * args.trans_cost_kw_m * tx_matrix_dist_m
-    # trans_cost = 0 # np.multiply(trans_cost_matrix, tx_cap_results_matrix)
+    # transmission cost based on the input transmission lines
     trans_cost = args.trans_line_m * cap_trans * args.trans_cost_kw_m
     # Potential generation time-series for curtailment calcs
     fix_load_hourly_kw, solar_pot_hourly, rain_rate_daily_mm_m2 = load_timeseries(args)
@@ -162,7 +159,6 @@ def full_results_processing(args, cap_results, results_ts, tx_cap_results_list, 
     solar_actual_cf      = avg_solar_gen / np.sum(cap_results[:,0])
 
     # total capital cost and operation cost
-    # total_solar_cost   = np.sum(cap_results[:,0]) * cap_solar   * float(args.solar_cost_kw)
     solar_unit_price_interpld = interp1d(args.solar_pw_cap_kw, args.solar_pw_cost_kw)
     solar_cost_node = np.zeros(args.num_regions)
     for i in range(args.num_regions):
@@ -177,6 +173,7 @@ def full_results_processing(args, cap_results, results_ts, tx_cap_results_list, 
         total_new_tx_cost = total_new_tx_cost + tx_cap_results_list[i] * tx_tuple_list[i][2]
 
     total_cost = total_solar_cost + total_battery_cost + total_diesel_cost + total_new_tx_cost + total_diesel_fuel_cost
+
     # Create arrays to store energy output & costs
     data_for_export = np.zeros((1,len(export_columns)))
 
