@@ -4,6 +4,7 @@ results_dir: './model_results'
 
 transmission_boolean: False
 
+
 # test input
 nodes_area: 257020
 irrgation_area_ratio: 0.1
