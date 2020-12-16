@@ -2,26 +2,25 @@
 data_dir: './data_uploads'
 results_dir: './model_results'
 
-transmission_boolean: False
-
 
 # test input
-nodes_area: 257020
+case_no: 'case_5_15_'
+nodes_area: 257020      # for results name, the
 irrgation_area_ratio: 0.1
 fixed_load_rate: 3.97     # 3.97 kWh/ha*day is a quarter of the irrigation load
 trans_line_m: 3855        # Because the line length is pre-solved by the assumptions and the grid planning model, so we input the number here straight forward.
 
 
 # General model assumptions
-num_year: 0.01369863 # this is get by 120/8760
-num_hours: 120       # 5 days
+num_year: 1
+num_hours: 8760
 num_regions: 19      # decide the region numbers, which should align with the pts_area file
 i_rate: 0.15
 
 # Solar
 solar_pw_cap_kw:  [0,1,   3,   10,   100,   1000]
 solar_pw_cost_kw: [0,3000,8000,22000,157000,1057000] # unit price: [4000, 3000, 2000, 1500, 1200]
-annualize_years_solar: 10
+annualize_years_solar: 15
 
 # Battery
 battery_cost_kwh: 250
@@ -48,10 +47,10 @@ annualize_years_trans: 20
 # Flexible load & pumps
 irrigation_minimum_power: 1 # Minimum operation power is 1 kW
 irrigation_maximum_power: 500
-first_season_start:  0
-first_season_end:    4
-second_season_start: 0
-second_season_end:   0
+first_season_start:  0     # Jul. 1
+first_season_end:    122   # Oct. 31, which should be included in the season
+second_season_start: 137   # Nov. 15
+second_season_end:   257   # Mar. 15
 water_demand_kg_m2_day: 7  # 7 mm / m2*day
 water_account_days: 5      # any 5-day period, water should be enough
 irrigation_kwh_p_kg: 0.000227

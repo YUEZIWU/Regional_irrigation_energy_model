@@ -1,5 +1,6 @@
 import numpy as np
-from model import create_model
+from extreme_days_model import create_extreme_day_model
+from annual_model import create_annual_model
 from utils import *
 import datetime
 
@@ -11,33 +12,36 @@ if __name__ == '__main__':
     #########################################################################
 
     args    = get_args()
-    results    = []
-    results_ts = []
 
-    # Create the model
-    m = create_model(args)
-
+    # the extreme weather days model creation and solving
+    m_ext = create_extreme_day_model(args)
     # Set model solver parameters
-    m.setParam("FeasibilityTol", args.feasibility_tol)
-    m.setParam("Method",         args.solver_method)
-
+    m_ext.setParam("FeasibilityTol", args.feasibility_tol)
+    m_ext.setParam("Method",         args.solver_method)
     # Solve the model
-    m.optimize()
-    # Retrieve the model solution
-    allvars = m.getVars()
+    m_ext.optimize()
+
+    # the annual model creation and solving
+    m_an = create_annual_model(args, m_ext)
+    m_an.setParam("FeasibilityTol", args.feasibility_tol)
+    m_an.setParam("Method",         args.solver_method)
+    m_an.optimize()
 
 
     ##########################################################################
     ### ------------------------- Results Output ------------------------- ###
     ##########################################################################
 
-    test_name = str(args.num_regions) + '_irrigation_zones_' + str(args.fixed_load_rate) + '_i_area_' + \
+    results    = []
+    results_ts = []
+
+    test_name = args.case_no + str(args.num_regions) + '_irrigation_zones_' + str(args.fixed_load_rate) + '_i_area_' + \
                 str(args.nodes_area) + '_line_' + str(args.trans_line_m)
     cap_columns, system_ts_columns = get_raw_columns()
 
     # Process the model solution
     tx_tuple_list = get_tx_tuples(args)
-    cap_results, results_ts, tx_cap_results_list, tx_cap_results_matrix = results_retrieval(args, m)
+    cap_results, results_ts, tx_cap_results_list, tx_cap_results_matrix = results_retrieval(args, m_an, m_ext)
 
     ## Save results: capacity, time series, transmission matrix
     df_cap_results_raw = pd.DataFrame(np.array(cap_results), columns = cap_columns)

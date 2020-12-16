@@ -39,6 +39,29 @@ def read_irrigation_area(args):
     irrigation_area_m2 = pd.read_csv(os.path.join(args.data_dir, 'pts_area.csv'))["AreaSqM"][0:args.num_regions]
     return irrigation_area_m2
 
+def find_extreme_solar_period(args):
+    # find the least 5 days solar potential during the irrigation seasons
+    T = args.num_hours
+    solar_pot_hourly   = np.array(pd.read_excel(os.path.join(args.data_dir, 'solar_pot.xlsx'),
+                                                index_col=None))[0:T,0]
+    extreme_solar_start_day = 0
+    for day in list(range(args.first_season_start, args.first_season_end - args.water_account_days + 2)) + \
+               list(range(args.second_season_start, args.second_season_end - args.water_account_days + 2)):
+        if np.sum(solar_pot_hourly[day*24:(day+5)*24]) < \
+                np.sum(solar_pot_hourly[extreme_solar_start_day*24:(extreme_solar_start_day+5)*24]):
+            extreme_solar_start_day = day
+    return extreme_solar_start_day
+
+def find_avg_solar(args):
+    # find the average solar potnetial
+    T = args.num_hours
+    solar_pot_hourly   = np.array(pd.read_excel(os.path.join(args.data_dir, 'solar_pot.xlsx'),
+                                                index_col=None))[0:T,0]
+    solar_pot_hourly_daily = solar_pot_hourly.reshape(int(T/24), 24)
+    avg_solar_po_day = np.average(solar_pot_hourly_daily, axis=0)
+    avg_solar_po = np.tile(avg_solar_po_day, args.water_account_days)
+    return avg_solar_po
+
 
 def read_tx_distance(args):
     tx_matrix_dist_m = pd.read_csv(os.path.join(args.data_dir, 'tx_matrix_dist_m.csv'), header=0, index_col=0)
@@ -64,7 +87,7 @@ def get_tx_tuples(args):
 def get_raw_columns():
     # Define columns for raw results export
     cap_columns = ['solar_regional', 'diesel_regional', 'battery_regional',
-                   'solar_util_regional', 'diesel_util_regional', 'battery_discharge_regional']
+                   'solar_util_regional', 'diesel_util_regional', 'battery_discharge_regional', 'diesel_regional_ext']
     system_ts_columns = ['system_solar_util','system_diesel_util',
                          'system_battery_level','system_battery_charge','system_battery_discharge',
                          'flexible_demand']
@@ -72,7 +95,7 @@ def get_raw_columns():
     return cap_columns, system_ts_columns
 
 
-def results_retrieval(args, m):
+def results_retrieval(args, m, m_ext):
     T = args.num_hours
     # Retrieve necessary model parameters
     cap_columns, system_ts_columns = get_raw_columns()
@@ -84,6 +107,7 @@ def results_retrieval(args, m):
         cap_results[i,0] = m.getVarByName('solar_cap_region_{}'.format(i + 1)).X
         cap_results[i,1] = m.getVarByName('diesel_cap_region_{}'.format(i + 1)).X
         cap_results[i,2] = m.getVarByName('batt_energy_cap_region_{}'.format(i + 1)).X
+        cap_results[i,6] = m_ext.getVarByName('diesel_cap_region_{}'.format(i + 1)).X
 
     timeseries_results = np.zeros((len(system_ts_columns), T, args.num_regions+1))
     for i in range(args.num_regions):
@@ -123,7 +147,7 @@ def get_processed_columns():
                'Peak Demand [kW]', 'Avg. total Demand [kW]', 'Avg. total Gen. [kW]',
                'Avg. Solar Gen. Potential [kW]', 'Avg. Solar Gen. [kW]',
                'Solar Cost [%]', 'Diesel Cost [%]', 'Battery Cost [%]', 'Trans. Cost [%]',
-               'Total LCOE [$/kWh]', 'Total LCOE - Demand [$/kWh]']
+               'Total LCOE [$/kWh]', 'Total LCOE - Demand [$/kWh]', 'Ext. Diesel [kW]']
     return columns
 
 
@@ -196,6 +220,7 @@ def full_results_processing(args, cap_results, results_ts, tx_cap_results_list, 
     data_for_export[0, 13] = total_new_tx_cost / total_cost * 100
     data_for_export[0, 14] = total_cost / (avg_total_gen * T)
     data_for_export[0, 15] = total_cost / (avg_total_demand * T)
+    data_for_export[0, 16] = np.sum(cap_results[:,6])  # the diesel capacity from extreme model
 
     results_df = pd.DataFrame(data_for_export, columns=export_columns)
 
